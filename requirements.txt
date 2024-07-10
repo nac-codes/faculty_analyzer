@@ -1,0 +1,10 @@
+pandas
+numpy
+fuzzywuzzy
+matplotlib
+seaborn
+openai
+requests
+beautifulsoup4
+python-Levenshtein
+tqdm
