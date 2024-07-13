@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-import csv
+import json
 
 def scrape_faculty_page(url):
     response = requests.get(url)
@@ -69,20 +69,21 @@ def scrape_person_page(url):
     
     return data
 
+
+
 def main():
     faculty_url = "https://history.virginia.edu/faculty"
     people_links = scrape_faculty_page(faculty_url)
     
-    with open('faculty_data_uva.csv', 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['name', 'position', 'phone', 'email', 'cv', 'specialties', 'education', 'photo', 'intro', 'publications']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-        writer.writeheader()
-        
-        for link in people_links:
-            person_data = scrape_person_page(link)
-            writer.writerow(person_data)
-            print(f"Scraped data for {person_data['name']}")
+    faculty_data = []
+    
+    for link in people_links:
+        person_data = scrape_person_page(link)
+        faculty_data.append(person_data)
+        print(f"Scraped data for {person_data['name']}")
+    
+    with open('faculty_data_uva.json', 'w', encoding='utf-8') as jsonfile:
+        json.dump(faculty_data, jsonfile, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()

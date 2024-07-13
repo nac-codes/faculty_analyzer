@@ -1,7 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-import csv
 import sys
+import json
+
 
 def scrape_faculty_page(url):
     try:
@@ -52,21 +53,23 @@ def scrape_person_page(url):
         
         # Fields (Research)
         fields_elem = soup.find('div', class_='field-hs-person-research')
+        fields_string = ""
         if fields_elem:
             fields = [a.text.strip() for a in fields_elem.find_all('a')]
-            data['fields'] = '; '.join(fields) if fields else "No fields found"
+            fields_string = '; '.join(fields) if fields else "No fields found"
         else:
-            data['fields'] = "No fields found"
+            fields_string = "No fields found"
         
         # Subfields
         subfields_elem = soup.find('div', class_='hb-categories custm-subfield')
+        subfields_string = ""
         if subfields_elem:
             subfields = [div.text.strip() for div in subfields_elem.find_all('div') if not div.has_attr('class')]
-            data['subfields'] = '; '.join(subfields) if subfields else "No subfields found"
+            subfields_string = '; '.join(subfields) if subfields else "No subfields found"
         else:
-            data['subfields'] = "No subfields found"
+            subfields_string = "No subfields found"
         
-        data['specialties'] = data['fields'] + '; ' + data['subfields']
+        data['specialties'] = fields_string + '; ' + subfields_string
 
         # Education
         education_elem = soup.find('div', class_='field-hs-person-education')
@@ -93,6 +96,8 @@ def scrape_person_page(url):
         print(f"Warning: Error fetching person page {url}: {e}", file=sys.stderr)
         return None
 
+
+
 def main():
     faculty_url = "https://history.stanford.edu/people/faculty"
     people_links = scrape_faculty_page(faculty_url)
@@ -101,19 +106,18 @@ def main():
         print("Error: No faculty links found. Exiting.", file=sys.stderr)
         return
     
-    with open('faculty_data_stanford.csv', 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['name', 'position', 'phone', 'email', 'cv', 'fields', 'subfields', 'education', 'photo', 'intro', 'publications', 'specialties']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-        writer.writeheader()
-        
-        for link in people_links:
-            person_data = scrape_person_page(link)
-            if person_data:
-                writer.writerow(person_data)
-                print(f"Scraped data for {person_data['name']}")
-            else:
-                print(f"Warning: Failed to scrape data for {link}", file=sys.stderr)
+    faculty_data = []
+    
+    for link in people_links:
+        person_data = scrape_person_page(link)
+        if person_data:
+            faculty_data.append(person_data)
+            print(f"Scraped data for {person_data['name']}")
+        else:
+            print(f"Warning: Failed to scrape data for {link}", file=sys.stderr)
+    
+    with open('faculty_data_stanford.json', 'w', encoding='utf-8') as jsonfile:
+        json.dump(faculty_data, jsonfile, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()

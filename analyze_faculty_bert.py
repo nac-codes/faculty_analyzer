@@ -4,13 +4,13 @@ import re
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
-from openai import OpenAI
-import os
 from tqdm import tqdm
 from rapidfuzz import fuzz
+from sentence_transformers import SentenceTransformer
+import os
 
-# Assuming you've set your OpenAI API key as an environment variable
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Load BERT model
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def normalize_text(text):
     if pd.isna(text):
@@ -39,48 +39,14 @@ def multi_ngram_search(query, text, max_n=3):
     
     return score / max_score if max_score > 0 else 0.0
 
-def chunk_text(text, max_tokens=4000):
-    words = text.split()
-    chunks = []
-    current_chunk = []
-    current_length = 0
-
-    for word in words:
-        if current_length + len(word) + 1 > max_tokens:
-            chunks.append(' '.join(current_chunk))
-            current_chunk = [word]
-            current_length = len(word)
-        else:
-            current_chunk.append(word)
-            current_length += len(word) + 1
-
-    if current_chunk:
-        chunks.append(' '.join(current_chunk))
-
-    return chunks
-
 def get_embedding(text):
     if pd.isna(text):
-        return np.zeros(1536)  # Return zero vector for NaN values
+        return np.zeros(384)  # Return zero vector for NaN values (384 is the dimension of 'all-MiniLM-L6-v2' embeddings)
     text = str(text).replace("\n", " ")
-    chunks = chunk_text(text)
-    embeddings = []
-    for chunk in chunks:
-        embedding = client.embeddings.create(input=[chunk], model="text-embedding-ada-002").data[0].embedding
-        embeddings.append(embedding)
-    return np.mean(embeddings, axis=0)
+    return model.encode(text)
 
 def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-def calculate_scores(text, target_phrase, avoid_phrase, target_embedding, avoid_embedding):
-    text_embedding = get_embedding(text)
-    return {
-        'target_cosine': cosine_similarity(text_embedding, target_embedding),
-        'avoid_cosine': cosine_similarity(text_embedding, avoid_embedding),
-        'target_ngram': multi_ngram_search(target_phrase, text),
-        'avoid_ngram': multi_ngram_search(avoid_phrase, text)
-    }
 
 def calculate_category_scores(text, categories, embeddings):
     text_embedding = get_embedding(text)
@@ -99,8 +65,14 @@ def analyze_faculty(input_file, target_categories, avoid_categories, target_scor
     
     df = pd.DataFrame(data)
     school = input_file.split('_')[-1].split('.')[0]
-    
-    df['combined_text'] = df['specialties'].fillna('') + ' ' + df['publications'].fillna('') + ' ' + df['intro'].fillna('')
+
+    # find which keys are in the df that are from this list: specilities, publications, intro, courses and create a new column called combined_text with content from whichever keys are present
+    df['combined_text'] = ""
+    keys_present = ['specialties', 'publications', 'intro', 'courses']
+    for key in keys_present:
+        if key in df.columns:    
+            df[key] = df[key].apply(lambda x: ' '.join(x) if isinstance(x, list) else (x if isinstance(x, str) else ''))
+            df['combined_text'] += df[key].fillna('') + ' '
     
     # Get embeddings for each category
     target_embeddings = {category: get_embedding(' '.join(phrases)) for category, phrases in target_categories.items()}
@@ -130,9 +102,8 @@ def analyze_faculty(input_file, target_categories, avoid_categories, target_scor
     output_columns = ['name', 'target_score', 'avoid_score', 'total_score'] + \
                      [f'{category}_score' for category in target_categories.keys()] + \
                      [f'{category}_score' for category in avoid_categories.keys()]
-    # add school
     df['school'] = school
-    output_df = df[output_columns]
+    output_df = df[output_columns + ['school']]
     
     output_df.to_csv(f'faculty_analysis_{school}.csv', index=False)
     
@@ -183,10 +154,14 @@ def analyze_all_schools(schools, target_categories, avoid_categories, target_sco
 # Example usage
 target_categories = {
     'military': ['military', 'warfare', 'war and society'],
-    'american_wars': ['World War I', 'World War II', 'revolutionary war', 'war of 1812'],
-    'geopolitics': ['geopolitical', 'international relations', 'diplomatic'],
-    'early_america': ['early American', 'colonial America', 'American revolution'],
-    'economic': ['economic']
+    'american_wars': ['World War I', 'World War II'],
+    'revolutionary war': ['revolutionary war', 'american revolution'],
+    'war of 1812': ['war of 1812', '1812'],
+    'cold war': ['cold war', 'soviet', 'communism'],
+    'jackson': ['jackson', 'andrew jackson', 'jacksonian democracy'],
+    'geopolitics': ['geopolitical', 'diplomatic', 'international relations'],
+    'early_america': ['early American', 'colonial America'],
+    'economic': ['economic', 'economics', 'economy', "industry"]
 }
 
 avoid_categories = {
@@ -197,14 +172,24 @@ avoid_categories = {
     'cultural_studies': ['cultural', 'postmodern', 'transnational'],
     'environmental': ['environmental', 'climate'],
     'migration': ['migration', 'diaspora'],
+    'transnational': ['transnational', 'global', 'world'],
+    'indigenous': ['indigenous', 'native', 'tribal', 'indian'],
+    'african': ['african', 'africa', 'nigeria', 'kenya'],
+    'rousseau': ['rousseau', 'social contract', 'general will'],
+    'empire_studies': ['empire', 'colonial', 'imperial', 'postcolonial'],
+    'post-wwii': ['post-wwii', 'postwar', 'post-war'],
+    '1960s': ['1960s', 'sixties', 'civil rights', 'vietnam'],
     'islam': ['islam', 'Middle East', 'arab spring']
 }
 
 target_score = 1
-avoid_score = -1
-cosine_weight = 0.4
-ngram_weight = 0.6
-schools = ["harvard", "stanford", "uva"]
+avoid_score = -1.25
+cosine_weight = 0.35
+ngram_weight = 0.65
+
+# list of schools are all the stripped school names from the faculty_data files in the current directory
+schools = [f.split('_')[-1].split('.')[0] for f in os.listdir() if f.startswith('faculty_data_') and f.endswith('.json')]
+
 
 combined_result = analyze_all_schools(
     schools,

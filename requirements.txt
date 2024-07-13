@@ -1,6 +1,7 @@
 pandas
 numpy
 fuzzywuzzy
+rapidfuzz
 matplotlib
 seaborn
 openai
@@ -8,3 +9,5 @@ requests
 beautifulsoup4
 python-Levenshtein
 tqdm
+scikit-learn
+sentence-transformers
