@@ -8,7 +8,7 @@ This project consists of tools for scraping faculty data from university history
 3. Faculty profile analysis capabilities
 
 ## Web Scraping Component
-The project includes a Python scraper (see `scrape_uva.py`) that extracts detailed faculty information including:
+The project includes a Python scraper for each deparment page (see `scrape_uva.py` as an exam,ple) that extracts detailed faculty information including:
 
 - Name and position
 - Contact information (email, phone)
@@ -144,13 +144,6 @@ The script will:
 - BeautifulSoup4
 - Requests
 - JSON
-
-## Contributing
-Contributions are welcome! Please submit pull requests with:
-- Support for additional universities
-- Improved data extraction methods
-- Analysis tools
-- Documentation updates
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
