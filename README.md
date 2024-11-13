@@ -103,6 +103,41 @@ Faculty data is stored in JSON format with a consistent schema. Each faculty mem
 }
 ```
 
+## Take embeddings and rank by category
+Embeddings were taken of all faculty profiles and areas of interest. Then this info was compared against the target and avoid categories (similarity to the target category contributed to a positive score, similarity to the avoid categories contributed to a negative score). These final tallies may be found at `faculty_analysis_all_schools.csv`. The categories are purely for illustrative purposes ;)
+
+```python
+target_categories = {
+    'military': ['military', 'warfare', 'war and society'],
+    'american_wars': ['World War I', 'World War II'],
+    'revolutionary war': ['revolutionary war', 'american revolution'],
+    'war of 1812': ['war of 1812', '1812'],
+    'cold war': ['cold war', 'soviet', 'communism'],
+    'jackson': ['jackson', 'andrew jackson', 'jacksonian democracy'],
+    'geopolitics': ['geopolitical', 'diplomatic', 'international relations'],
+    'early_america': ['early American', 'colonial America'],
+    'economic': ['economic', 'economics', 'economy', "industry"]
+}
+
+avoid_categories = {
+    'decolonization': ['decolonization', 'postcolonial'],
+    'critical_theory': ['critical race theory', 'feminism', 'queer studies', 'intersectional'],
+    'social_issues': ['race', 'class', 'gender', 'LGBTQ+', 'social justice', 'inequality'],
+    'economic_systems': ['capitalism', 'Marxism', 'labor movements'],
+    'cultural_studies': ['cultural', 'postmodern', 'transnational'],
+    'environmental': ['environmental', 'climate'],
+    'migration': ['migration', 'diaspora'],
+    'transnational': ['transnational', 'global', 'world'],
+    'indigenous': ['indigenous', 'native', 'tribal', 'indian'],
+    'african': ['african', 'africa', 'nigeria', 'kenya'],
+    'rousseau': ['rousseau', 'social contract', 'general will'],
+    'empire_studies': ['empire', 'colonial', 'imperial', 'postcolonial'],
+    'post-wwii': ['post-wwii', 'postwar', 'post-war'],
+    '1960s': ['1960s', 'sixties', 'civil rights', 'vietnam'],
+    'islam': ['islam', 'Middle East', 'arab spring']
+}
+```
+
 ## Key Features
 
 ### Web Scraping
